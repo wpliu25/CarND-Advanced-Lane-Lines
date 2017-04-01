@@ -1,5 +1,6 @@
 import os
 import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
 from Helper_Functions import *
 
 # Define a class to receive the characteristics of each line detection
@@ -68,10 +69,13 @@ if __name__ == '__main__':
     if os.path.exists(threshold_path) and len([name for name in os.listdir(threshold_path)]) < 1:
         for idx, fname in enumerate(threshold_images):
             image = mpimg.imread(fname)
-            result = pipeline(image)
+            color, result = pipeline(image)
             write_name = os.path.join(threshold_path, 'threshold_' + file_group + str(idx) + '.jpg')
-            cv2.imwrite(write_name, result)
-            print(write_name)
+            plt.imshow(result, cmap='gray', interpolation='bicubic')
+            plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
+            plt.savefig(write_name)
+            plt.show()
+            plt.close()
 
     # 4. Perspective transform
 

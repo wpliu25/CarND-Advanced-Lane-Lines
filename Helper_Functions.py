@@ -167,54 +167,32 @@ def dir_threshold(img, sobel_kernel=3, thresh=(0, np.pi/2)):
     # Return the binary image
     return binary_output
 
-
-def pipeline(img, s_thresh=(130, 255), sx_thresh=(20, 100)):
-    img = np.copy(img)
+def color_threshold(img, channel=2, s_thresh=(170, 255)):
     # Convert to HSV color space and separate the V channel
     hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HLS).astype(np.float)
-    l_channel = hsv[:, :, 1]
-    s_channel = hsv[:, :, 2]
-    # Sobel x
-    sobelx = cv2.Sobel(l_channel, cv2.CV_64F, 1, 0)  # Take the derivative in x
-    abs_sobelx = np.absolute(sobelx)  # Absolute x derivative to accentuate lines away from horizontal
-    scaled_sobel = np.uint8(255 * abs_sobelx / np.max(abs_sobelx))
-
-    # Threshold x gradient
-    sxbinary = np.zeros_like(scaled_sobel)
-    sxbinary[(scaled_sobel >= sx_thresh[0]) & (scaled_sobel <= sx_thresh[1])] = 1
+    s_channel = hsv[:, :, channel]
 
     # Threshold color channel
     s_binary = np.zeros_like(s_channel)
     s_binary[(s_channel >= s_thresh[0]) & (s_channel <= s_thresh[1])] = 1
+
+    return s_binary
+
+def pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100)):
+    img = np.copy(img)
+
+    # gradient
+    sxbinary = abs_sobel_thresh(img, orient='x', thresh_min=sx_thresh[0], thresh_max=sx_thresh[1])
+
+    # color
+    s_binary = color_threshold(img, 2, s_thresh)
+
     # Stack each channel
     # Note color_binary[:, :, 0] is all 0s, effectively an all black image. It might
     # be beneficial to replace this channel with something else.
     color_binary = np.dstack((np.zeros_like(sxbinary), sxbinary, s_binary))
+
     # Combine the two binary thresholds
     combined_binary = np.zeros_like(sxbinary)
     combined_binary[(s_binary == 1) | (sxbinary == 1)] = 1
-    return combined_binary
-
-
-def window_mask(width, height, img_ref, center, level):
-    output = np.zeros_like(img_ref)
-    output[int(img_ref.shape[0] - (level + 1) * height):int(img_ref.shape[0] - level * height),
-    max(0, int(center - width / 2)):min(int(center + width / 2), img_ref.shape[1])] = 1
-    return output
-
-
-def find_window_centroids(image, window_width, window_height, margin):
-    window_centroids = []  # Store the (left,right) window centroid positions per level
-    window = np.ones(window_width)  # Create our window template that we will use for convolutions
-
-    # First find the two starting positions for the left and right lane by using np.sum to get the vertical image slice
-    # and then np.convolve the vertical image slice with the window template
-
-    # Sum quarter bottom of image to get slice, could use a different ratio
-    l_sum = np.sum(warped[int(3 * warped.shape[0] / 4):, :int(warped.shape[1] / 2)], axis=0)
-    l_center = np.argmax(np.convolve(window, l_sum)) - window_width / 2
-    r_sum = np.sum(warped[int(3 * warped.shape[0] / 4):, int(warped.shape[1] / 2):], axis=0)
-    r_center = np.argmax(np.convolve(window, r_sum)) - window_width / 2 + int(warped.shape[1] / 2)
-
-    # Add what we found for the first layer
-    window_centroids.append((l_center, r_center))
+    return color_binary, combined_binary
