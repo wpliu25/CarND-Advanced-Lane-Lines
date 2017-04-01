@@ -2,6 +2,7 @@ import os
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 from Helper_Functions import *
+import cv2
 
 # Define a class to receive the characteristics of each line detection
 class Line():
@@ -52,7 +53,7 @@ if __name__ == '__main__':
 
     # 2. Distortion correction
     undistort_path = os.path.join('output_images','undistorted')
-    file_group = 'test'
+    file_group = 'straight_lines'
     test_path = os.path.join('test_images', file_group + '*.jpg')
     test_images = glob.glob(test_path)
     if os.path.exists(undistort_path) and len([name for name in os.listdir(undistort_path)]) < 1:
@@ -78,6 +79,29 @@ if __name__ == '__main__':
             plt.close()
 
     # 4. Perspective transform
+    threshold_path = os.path.join('output_images', 'perspective')
+    undistorted_images = glob.glob(os.path.join(undistort_path, 'undistorted_' + file_group + '*.jpg'))
+    if os.path.exists(threshold_path):  # and len([name for name in os.listdir(threshold_path)]) < 1:
+        for idx, fname in enumerate(undistorted_images):
+            image = mpimg.imread(fname)
+            src, dst, warp_m, warp_minv = get_perspective_transform(image)
+            write_name = os.path.join(threshold_path, 'perspective_' + file_group + str(idx) + '.jpg')
+            plt.subplot(1, 2, 1)
+            plt.hold(True)
+            plt.imshow(image, cmap='gray')
+            colors = ['r+', 'g+', 'b+', 'w+']
+            for i in range(4):
+                plt.plot(src[i, 0], src[i, 1], colors[i])
+
+            im2 = cv2.warpPerspective(image, warp_m, (image.shape[1], image.shape[0]), flags=cv2.INTER_LINEAR)
+            plt.subplot(1, 2, 2)
+            plt.hold(True)
+            plt.imshow(im2, cmap='gray')
+            for i in range(4):
+                plt.plot(dst[i, 0], dst[i, 1], colors[i])
+            plt.savefig(write_name)
+            plt.show()
+            plt.close()
 
     # 5. Determine lane lines
 

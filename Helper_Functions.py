@@ -196,3 +196,55 @@ def pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100)):
     combined_binary = np.zeros_like(sxbinary)
     combined_binary[(s_binary == 1) | (sxbinary == 1)] = 1
     return color_binary, combined_binary
+
+
+def window_mask(width, height, img_ref, center, level):
+    output = np.zeros_like(img_ref)
+    output[int(img_ref.shape[0] - (level + 1) * height):int(img_ref.shape[0] - level * height),
+    max(0, int(center - width / 2)):min(int(center + width / 2), img_ref.shape[1])] = 1
+    return output
+
+
+def find_window_centroids(image, window_width, window_height, margin):
+    window_centroids = []  # Store the (left,right) window centroid positions per level
+    window = np.ones(window_width)  # Create our window template that we will use for convolutions
+
+    # First find the two starting positions for the left and right lane by using np.sum to get the vertical image slice
+    # and then np.convolve the vertical image slice with the window template
+
+    # Sum quarter bottom of image to get slice, could use a different ratio
+    l_sum = np.sum(warped[int(3 * warped.shape[0] / 4):, :int(warped.shape[1] / 2)], axis=0)
+    l_center = np.argmax(np.convolve(window, l_sum)) - window_width / 2
+    r_sum = np.sum(warped[int(3 * warped.shape[0] / 4):, int(warped.shape[1] / 2):], axis=0)
+    r_center = np.argmax(np.convolve(window, r_sum)) - window_width / 2 + int(warped.shape[1] / 2)
+
+    # Add what we found for the first layer
+    window_centroids.append((l_center, r_center))
+
+def get_perspective_transform(image, src_in = None, dst_in = None):
+    img_size = image.shape
+    a = 60
+    b = 10
+    d = 100
+    if src_in is None:
+        src_out = np.array([[(img_size[1]/2) - a,   (img_size[0]/2) + d],
+                        [(img_size[1]/6) - b,   img_size[0]],
+                        [(img_size[1]*5/6)+a-b, img_size[0]],
+                        [(img_size[1]/2)+a+0.5*b, (img_size[0]/2) + d]], np.float32)
+    else:
+        src_out = src_in
+
+    if dst_in is None:
+        dst_out = np.array([[(img_size[1]/4),   0],
+                        [(img_size[1]/4),   img_size[0]],
+                        [(img_size[1]*3/4), img_size[0]],
+                        [(img_size[1]*3/4), 0]], np.float32)
+
+    else:
+        dst_out = dst_in
+
+    warp_m = cv2.getPerspectiveTransform(src_out, dst_out)
+    warp_minv = cv2.getPerspectiveTransform(dst_out, src_out)
+
+    return src_out, dst_out, warp_m, warp_minv
+
