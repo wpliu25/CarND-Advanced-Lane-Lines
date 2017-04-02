@@ -3,6 +3,8 @@ import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 from Helper_Functions import *
 import cv2
+import re
+import numpy as np
 
 # Define a class to receive the characteristics of each line detection
 class Line():
@@ -53,56 +55,98 @@ if __name__ == '__main__':
 
     # 2. Distortion correction
     undistort_path = os.path.join('output_images','undistorted')
-    file_group = 'straight_lines'
+    file_group = 'test'
     test_path = os.path.join('test_images', file_group + '*.jpg')
-    test_images = glob.glob(test_path)
+    test_images = sorted(glob.glob(test_path))
     if os.path.exists(undistort_path) and len([name for name in os.listdir(undistort_path)]) < 1:
         for idx, fname in enumerate(test_images):
+            index = re.findall(r'\d+', fname)
             img = cv2.imread(fname)
             unimg = cal_undistort(img, mtx, dist)
-            write_name = os.path.join(undistort_path,'undistorted_'+file_group+str(idx)+'.jpg')
+            write_name = os.path.join(undistort_path,'undistorted_'+file_group+str(index[0])+'.jpg')
             cv2.imwrite(write_name, unimg)
             print(write_name)
 
     # 3. Color/gradient threshold
     threshold_path = os.path.join('output_images', 'threshold')
-    threshold_images = glob.glob(os.path.join(undistort_path, 'undistorted_'+file_group + '*.jpg'))
+    undistorted_images = sorted(glob.glob(os.path.join(undistort_path, 'undistorted_' + file_group + '*.jpg')))
     if os.path.exists(threshold_path) and len([name for name in os.listdir(threshold_path)]) < 1:
-        for idx, fname in enumerate(threshold_images):
+        for idx, fname in enumerate(undistorted_images):
+            index = re.findall(r'\d+', fname)
             image = mpimg.imread(fname)
             color, result = pipeline(image)
-            write_name = os.path.join(threshold_path, 'threshold_' + file_group + str(idx) + '.jpg')
-            plt.imshow(result, cmap='gray', interpolation='bicubic')
-            plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
-            plt.savefig(write_name)
-            plt.show()
-            plt.close()
+            write_name = os.path.join(threshold_path, 'threshold_' + file_group + str(index[0]) + '.jpg')
+            cv2.imwrite(write_name, result)
+            #plt.imshow(result, cmap='gray', interpolation='bicubic')
+            #plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
+            #plt.savefig(write_name)
+            #plt.show()
+            #plt.close()
 
     # 4. Perspective transform
-    threshold_path = os.path.join('output_images', 'perspective')
-    undistorted_images = glob.glob(os.path.join(undistort_path, 'undistorted_' + file_group + '*.jpg'))
-    if os.path.exists(threshold_path):  # and len([name for name in os.listdir(threshold_path)]) < 1:
-        for idx, fname in enumerate(undistorted_images):
+    perspective_threshold_path = os.path.join('output_images', 'perspective_threshold')
+    threshold_images = sorted(glob.glob(os.path.join(threshold_path, 'threshold_'+file_group + '*.jpg')))
+    warp_param = 'warp_param.npz'
+    if os.path.exists(perspective_threshold_path) and len([name for name in os.listdir(perspective_threshold_path)]) < 1:
+        for idx, fname in enumerate(threshold_images):
+            index = re.findall(r'\d+', fname)
             image = mpimg.imread(fname)
             src, dst, warp_m, warp_minv = get_perspective_transform(image)
-            write_name = os.path.join(threshold_path, 'perspective_' + file_group + str(idx) + '.jpg')
-            plt.subplot(1, 2, 1)
-            plt.hold(True)
-            plt.imshow(image, cmap='gray')
-            colors = ['r+', 'g+', 'b+', 'w+']
-            for i in range(4):
-                plt.plot(src[i, 0], src[i, 1], colors[i])
+            np.savez(warp_param, src=src, dst=dst, warp_m=warp_m, warp_minv=warp_minv)
+            write_name = os.path.join(perspective_threshold_path, 'perspective_threshold_' + file_group + str(index[0]) + '.jpg')
+            result = cv2.warpPerspective(image, warp_m, (image.shape[1], image.shape[0]), flags=cv2.INTER_LINEAR)
+            cv2.imwrite(write_name, result)
+            if 0:
+                plt.subplot(1, 2, 1)
+                plt.hold(True)
+                plt.imshow(image, cmap='gray')
+                colors = ['r+', 'g+', 'b+', 'w+']
+                for i in range(4):
+                    plt.plot(src[i, 0], src[i, 1], colors[i])
 
-            im2 = cv2.warpPerspective(image, warp_m, (image.shape[1], image.shape[0]), flags=cv2.INTER_LINEAR)
-            plt.subplot(1, 2, 2)
-            plt.hold(True)
-            plt.imshow(im2, cmap='gray')
-            for i in range(4):
-                plt.plot(dst[i, 0], dst[i, 1], colors[i])
-            plt.savefig(write_name)
-            plt.show()
-            plt.close()
+                im2 = cv2.warpPerspective(image, warp_m, (image.shape[1], image.shape[0]), flags=cv2.INTER_LINEAR)
+                plt.subplot(1, 2, 2)
+                plt.hold(True)
+                plt.imshow(im2, cmap='gray')
+                for i in range(4):
+                    plt.plot(dst[i, 0], dst[i, 1], colors[i])
+                plt.savefig(write_name)
+                plt.show()
+                plt.close()
+    else:
+        print('Loading warp params from %s...' % warp_param)
+        warp_data = np.load(warp_param)
+        src = warp_data['src']
+        dst = warp_data['dst']
+        warp_m = warp_data['warp_m']
+        warp_minv = warp_data['warp_minv']
 
     # 5. Determine lane lines
+        perspective_threshold_images = sorted(glob.glob(os.path.join(perspective_threshold_path, 'perspective_threshold_' + file_group + '*.jpg')))
+        if os.path.exists(perspective_threshold_path):
+            for idx, fname in enumerate(perspective_threshold_images):
+                index = re.findall(r'\d+', fname)
+                img = mpimg.imread(fname)
+                if 0:
+                    histogram = np.sum(img[int(img.shape[0] / 2):, :], axis=0)
+                    plt.plot(histogram)
+                    plt.show()
+                    plt.close()
+
+                if(int(index[0]) > 1):
+                    left_fit, right_fit, left_fitx, right_fitx, ploty, ploty, out_img = get_lane_lines_with_prior(img, left_fit, right_fit)
+                else:
+                    left_fit, right_fit, left_fitx, right_fitx, ploty, ploty, out_img = get_lane_lines(img)
+                write_name = os.path.join('output_images',
+                                          'perspective_threshold_' + file_group + str(index[0]) + '.jpg')
+                print(write_name)
+                cv2.imwrite(write_name, out_img)
+                plt.imshow(out_img)
+                plt.plot(left_fitx, ploty, color='yellow')
+                plt.plot(right_fitx, ploty, color='yellow')
+                plt.xlim(0, 1280)
+                plt.ylim(720, 0)
+                plt.show()
+                plt.close()
 
     # 6. Determine lane curvature
