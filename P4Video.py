@@ -4,8 +4,10 @@ from IPython.display import HTML
 from P4 import *
 import sys
 
+line = Line()
+
 def process_image(image):
-    result = AdvancedLaneLines(image)
+    result = AdvancedLaneLines(image, line, 0)
     return result
 
 if __name__ == "__main__":

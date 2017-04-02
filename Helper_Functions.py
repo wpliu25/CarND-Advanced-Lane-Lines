@@ -9,8 +9,8 @@ def camera_calibrate(cal_images, nx=9, ny=6):
     '''
     camera_calibrate finds camera calibration parameters
     :param cal_images:
-    :param nx:
-    :param ny:
+    :param nx: number of squares in width of checkerboard
+    :param ny: number of square in height of checkerboard
     :return:
     '''
     # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
@@ -42,8 +42,8 @@ def camera_setup(calibration_path='camera_cal/calibration*.jpg', nx=9, ny=6):
     '''
     camera_setup sets up calibration images and returns camera calibration results
     :param calibration_path:
-    :param nx:
-    :param ny:
+    :param nx: number of squares in width of checkerboard
+    :param ny: number of square in height of checkerboard
     :return:
     '''
     # Make a list of calibration images
@@ -197,7 +197,7 @@ def window_mask(width, height, img_ref, center, level):
     return output
 
 
-def find_window_centroids(image, window_width, window_height, margin):
+def find_window_centroids(warped, window_width, window_height, margin):
     window_centroids = []  # Store the (left,right) window centroid positions per level
     window = np.ones(window_width)  # Create our window template that we will use for convolutions
 
@@ -480,7 +480,7 @@ def sliding_window_convolution(warped):
 
     return output
 
-def get_curvature(ploty, left_fit, right_fit, leftx, rightx):
+def get_curvature(ploty, left_fit, right_fit, leftx, rightx, xm_per_pix = 3.7 / 700, ym_per_pix= 30 / 720):
     # Define y-value where we want radius of curvature
     # I'll choose the maximum y-value, corresponding to the bottom of the image
     y_eval = np.max(ploty)
@@ -490,8 +490,8 @@ def get_curvature(ploty, left_fit, right_fit, leftx, rightx):
     # Example values: 1926.74 1908.48
 
     # Define conversions in x and y from pixels space to meters
-    ym_per_pix = 30 / 720  # meters per pixel in y dimension
-    xm_per_pix = 3.7 / 700  # meters per pixel in x dimension
+    #ym_per_pix = 30 / 720  # meters per pixel in y dimension
+    #xm_per_pix = 3.7 / 700  # meters per pixel in x dimension
 
     # Fit new polynomials to x,y in world space
     left_fit_cr = np.polyfit(ploty * ym_per_pix, leftx * xm_per_pix, 2)
@@ -503,6 +503,8 @@ def get_curvature(ploty, left_fit, right_fit, leftx, rightx):
         2 * right_fit_cr[0])
 
     return left_curverad, right_curverad
+
+
 
 
 

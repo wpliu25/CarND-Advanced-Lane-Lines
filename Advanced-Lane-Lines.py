@@ -122,42 +122,42 @@ if __name__ == '__main__':
         warp_minv = warp_data['warp_minv']
 
     # 5. Determine lane lines
-        perspective_threshold_images = sorted(glob.glob(os.path.join(perspective_threshold_path, 'perspective_threshold_' + file_group + '*.jpg')))
-        if os.path.exists(perspective_threshold_path):
-            for idx, fname in enumerate(perspective_threshold_images):
-                index = re.findall(r'\d+', fname)
-                img = mpimg.imread(fname)
-                if 0:
-                    histogram = np.sum(img[int(img.shape[0] / 2):, :], axis=0)
-                    plt.plot(histogram)
-                    plt.show()
-                    plt.close()
+    perspective_threshold_images = sorted(glob.glob(os.path.join(perspective_threshold_path, 'perspective_threshold_' + file_group + '*.jpg')))
+    if os.path.exists(perspective_threshold_path):
+        for idx, fname in enumerate(perspective_threshold_images):
+            index = re.findall(r'\d+', fname)
+            img = mpimg.imread(fname)
+            if 0:
+                histogram = np.sum(img[int(img.shape[0] / 2):, :], axis=0)
+                plt.plot(histogram)
+                plt.show()
+                plt.close()
 
-                if 0:
-                    out_img = sliding_window_convolution(img)
-                    # Display the final results
-                    plt.imshow(out_img)
-                    plt.title('window fitting results')
-                    plt.show()
+            if 0:
+                out_img = sliding_window_convolution(img)
+                # Display the final results
+                plt.imshow(out_img)
+                plt.title('window fitting results')
+                plt.show()
+            else:
+                if(int(index[0]) > 1) and False:
+                    left_fit, right_fit, left_fitx, right_fitx, ploty, out_img = get_lane_lines_with_prior(img, left_fit, right_fit)
                 else:
-                    if(int(index[0]) > 1) and False:
-                        left_fit, right_fit, left_fitx, right_fitx, ploty, out_img = get_lane_lines_with_prior(img, left_fit, right_fit)
-                    else:
-                        left_fit, right_fit, left_fitx, right_fitx, ploty, out_img = get_lane_lines(img)
+                    left_fit, right_fit, left_fitx, right_fitx, ploty, out_img = get_lane_lines(img)
 
-                    # 6. Determine lane curvature
-                    left_curverad, right_curverad = get_curvature(ploty, left_fit, right_fit, left_fitx, right_fitx)
-                    # Now our radius of curvature is in meters
-                    print(left_curverad, 'm', right_curverad, 'm')
-                    write_name = os.path.join('output_images',
+                # 6. Determine lane curvature
+                left_curverad, right_curverad = get_curvature(ploty, left_fit, right_fit, left_fitx, right_fitx)
+                # Now our radius of curvature is in meters
+                print(left_curverad, 'm', right_curverad, 'm')
+                write_name = os.path.join('output_images',
                                                   'perspective_threshold_' + file_group + str(index[0]) + '.jpg')
-                    print(write_name)
-                    cv2.imwrite(write_name, out_img)
-                    plt.imshow(out_img)
-                    plt.plot(left_fitx, ploty, color='yellow')
-                    plt.plot(right_fitx, ploty, color='yellow')
-                    plt.xlim(0, 1280)
-                    plt.ylim(720, 0)
-                    plt.show()
-                    #plt.close()
+                print(write_name)
+                cv2.imwrite(write_name, out_img)
+                plt.imshow(out_img)
+                plt.plot(left_fitx, ploty, color='yellow')
+                plt.plot(right_fitx, ploty, color='yellow')
+                plt.xlim(0, 1280)
+                plt.ylim(720, 0)
+                plt.show()
+                #plt.close()
 
