@@ -133,20 +133,31 @@ if __name__ == '__main__':
                     plt.show()
                     plt.close()
 
-                if(int(index[0]) > 1):
-                    left_fit, right_fit, left_fitx, right_fitx, ploty, ploty, out_img = get_lane_lines_with_prior(img, left_fit, right_fit)
+                if 0:
+                    out_img = sliding_window_convolution(img)
+                    # Display the final results
+                    plt.imshow(out_img)
+                    plt.title('window fitting results')
+                    plt.show()
                 else:
-                    left_fit, right_fit, left_fitx, right_fitx, ploty, ploty, out_img = get_lane_lines(img)
-                write_name = os.path.join('output_images',
-                                          'perspective_threshold_' + file_group + str(index[0]) + '.jpg')
-                print(write_name)
-                cv2.imwrite(write_name, out_img)
-                plt.imshow(out_img)
-                plt.plot(left_fitx, ploty, color='yellow')
-                plt.plot(right_fitx, ploty, color='yellow')
-                plt.xlim(0, 1280)
-                plt.ylim(720, 0)
-                plt.show()
-                plt.close()
+                    if(int(index[0]) > 1) and False:
+                        left_fit, right_fit, left_fitx, right_fitx, ploty, ploty, out_img = get_lane_lines_with_prior(img, left_fit, right_fit)
+                    else:
+                        left_fit, right_fit, left_fitx, right_fitx, ploty, ploty, out_img = get_lane_lines(img)
 
-    # 6. Determine lane curvature
+                    # 6. Determine lane curvature
+                    left_curverad, right_curverad = get_curvature(ploty, left_fit, right_fit, left_fitx, right_fitx)
+                    # Now our radius of curvature is in meters
+                    print(left_curverad, 'm', right_curverad, 'm')
+                    write_name = os.path.join('output_images',
+                                                  'perspective_threshold_' + file_group + str(index[0]) + '.jpg')
+                    print(write_name)
+                    cv2.imwrite(write_name, out_img)
+                    plt.imshow(out_img)
+                    plt.plot(left_fitx, ploty, color='yellow')
+                    plt.plot(right_fitx, ploty, color='yellow')
+                    plt.xlim(0, 1280)
+                    plt.ylim(720, 0)
+                    plt.show()
+                    #plt.close()
+
