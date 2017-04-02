@@ -34,14 +34,6 @@ def camera_calibrate(cal_images, nx=9, ny=6):
             objpoints.append(objp)
             imgpoints.append(corners)
 
-            # Draw and display the corners
-            #cv2.drawChessboardCorners(img, (8,6), corners, ret)
-            #write_name = 'corners_found'+str(idx)+'.jpg'
-            #cv2.imwrite(write_name, img)
-            #cv2.imshow('img', img)
-            #cv2.waitKey(500)
-            #cv2.destroyAllWindows()
-
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
 
     return mtx, dist
@@ -327,7 +319,7 @@ def get_lane_lines(binary_warped):
     out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
     out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
 
-    return left_fit, right_fit, left_fitx, right_fitx, ploty, ploty, out_img
+    return left_fit, right_fit, left_fitx, right_fitx, ploty, out_img
 
 def get_lane_lines_with_prior(binary_warped, left_fit, right_fit):
     # Assume you now have a new warped binary image
@@ -403,7 +395,7 @@ def get_lane_lines_with_prior(binary_warped, left_fit, right_fit):
     cv2.fillPoly(window_img, np.int_([right_line_pts]), (0, 255, 0))
     result = cv2.addWeighted(out_img, 1, window_img, 0.3, 0)
 
-    return left_fit, right_fit, left_fitx, right_fitx, ploty, ploty, result
+    return left_fit, right_fit, left_fitx, right_fitx, ploty, result
 
 def window_mask(width, height, img_ref, center, level):
     output = np.zeros_like(img_ref)

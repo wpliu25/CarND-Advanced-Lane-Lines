@@ -141,9 +141,9 @@ if __name__ == '__main__':
                     plt.show()
                 else:
                     if(int(index[0]) > 1) and False:
-                        left_fit, right_fit, left_fitx, right_fitx, ploty, ploty, out_img = get_lane_lines_with_prior(img, left_fit, right_fit)
+                        left_fit, right_fit, left_fitx, right_fitx, ploty, out_img = get_lane_lines_with_prior(img, left_fit, right_fit)
                     else:
-                        left_fit, right_fit, left_fitx, right_fitx, ploty, ploty, out_img = get_lane_lines(img)
+                        left_fit, right_fit, left_fitx, right_fitx, ploty, out_img = get_lane_lines(img)
 
                     # 6. Determine lane curvature
                     left_curverad, right_curverad = get_curvature(ploty, left_fit, right_fit, left_fitx, right_fitx)
