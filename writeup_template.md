@@ -27,7 +27,8 @@ The goals / steps of this project are the following:
 [image7]: ./output_images/calibration_example.png "Calibration Example"
 [image8]: ./output_images/undistorted_example.png "Undistorted Example"
 [image9]: ./output_images/threshold_example.png "Threshold Example"
-[image10]: ./output_images/P4_VideoScreenShot.png "Output Example"
+[image10]: ./output_images/RCurve.png "Curvature Equation"
+[image11]: ./output_images/P4_VideoScreenShot.png "Output Example"
 [video1]: ./project_video_output.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
@@ -94,21 +95,24 @@ I verified that my perspective transform was working as expected by drawing the 
 
 ![alt text][image4]
 
-####4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
+####4. Lane-line pixel identification and polynomial fit (lines 243 through 298 (functions: `get_lane_lines` and `get_lane_lines_with_prior`) in my code in `Helper_function.py`)
+There are 2 functions that are used for lane-line pixel identification and polynomial fit. `get_lane_lines_with_prior` uses input prior left and right lanes to initialize the lane-line search while `get_lane_lines` is called if there aren't any prior lines to reference. Instead this function uses a histogram and sliding windows in a more tedious search. 
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+After obtaining candidate pixels for the left and right lane for I found my lane lines by fitting a 2nd order polynomial using numpy's polyfit, pretty much exactly like the project lesson.
 
-![alt text][image5]
+####5. Radius of curvature and vehicle position (lines 483 through 505 (functions: `get_curvature`) in my code in `Helper_function.py`)
 
-####5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
+For radius of curvature I used the sample implementation provided in the lession to compute the radius of curvature according to this equation where A, B, C are the coefficients of the 2nd order polynomial equation computed from 4.
 
-I did this in lines # through # in my code in `my_other_file.py`
+![alt text][image10]
+
+For vehicle position I compared the center of the image to the center of the left and right detected lanes.
 
 ####6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+I implemented this step in lines 119 through 137 (function: `draw`) of my code in `P4.py` in the function `map_lane()`.  Here is an example of my result on a test image:
 
-![alt text][image10]
+![alt text][image11]
 
 ---
 
