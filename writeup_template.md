@@ -101,7 +101,7 @@ There are 2 functions that are used for lane-line pixel identification and polyn
 
 After obtaining candidate pixels for the left and right lane for I found my lane lines by fitting a 2nd order polynomial using numpy's polyfit, pretty much exactly like the project lesson.
 
-####5. Radius of curvature and vehicle position (lines 483 through 505 (functions: `get_curvature`) in my code in `Helper_function.py`)
+####5. Radius of curvature and vehicle position (lines 483 through 505 (functions: `get_curvature`) and lines 536 through 542 (function: `get_vehicle_position`) in my code in `Helper_function.py`)
 
 For radius of curvature I used the sample implementation provided in the lession to compute the radius of curvature according to this equation where A, B, C are the coefficients of the 2nd order polynomial equation computed from 4.
 
