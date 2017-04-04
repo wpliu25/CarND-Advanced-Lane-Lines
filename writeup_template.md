@@ -21,7 +21,7 @@ The goals / steps of this project are the following:
 [image1]: ./examples/undistort_output.png "Undistorted"
 [image2]: ./test_images/test1.jpg "Road Transformed"
 [image3]: ./examples/binary_combo_example.jpg "Binary Example"
-[image4]: ./examples/warped_straight_lines.jpg "Warp Example"
+[image4]: ./examples/perspective_straight_lines1.jpg "Warp Example"
 [image5]: ./examples/color_fit_lines.jpg "Fit Visual"
 [image6]: ./examples/example_output.jpg "Output"
 [image7]: ./output_images/calibration_example.png "Calibration Example"
@@ -32,12 +32,13 @@ The goals / steps of this project are the following:
 [video1]: ./project_video_output.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
-###Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
+###Here I will consider the rubric points individually and describe how I addressed each point in my implementation.
+
+To generate video use P4Video.py as follows:
+P4Video.py <input_file> <output_file>  
 
 ---
 ###Writeup / README
-
-####1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  [Here](https://github.com/udacity/CarND-Advanced-Lane-Lines/blob/master/writeup_template.md) is a template writeup for this project you can use as a guide and a starting point.  
 
 ###Camera Calibration
 
@@ -61,7 +62,7 @@ To demonstrate this step, I will describe how I apply the distortion correction 
 The output from `cv2.calibrateCamera()` includes camera matrix, `mtx` and distortion coefficients `dist`. The code for function to undistort is contained in lines 54 through 67 (function: `cal_undistort`) of the `Helper_Function.py` file. Given an original image, camera matrix and distortion coefficient, this function outputs the undistorted image using `cv.undistort` function.
 
 ####2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines 173 through 190 (function:`pipeline`) of `Helper_Function.py`).  The color threshold only keeps pixels with `s` values between 170 and 255, after conversion to the HSV color space (lines 162 through 171 (function:`color_threshold`) of `Helper_Function.py`). The gradient threshold only keeps pixels with an absolute gradient between 20 and 100 in the x-direction after conversion to grayscale and using Sobel (lines 107 through 124 (function:`abs_sobel_thresh`) of `Helper_Function.py`). Here's an example of my output for this step.
+I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines 176 through 179 (function:`pipeline`) of `Helper_Function.py`).  The color threshold only keeps pixels with `s` values between 170 and 255, after conversion to the HSV color space (lines 162 through 171 (function:`color_threshold`) of `Helper_Function.py`). The gradient threshold only keeps pixels with an absolute gradient between 20 and 100 in the x-direction or y-direction after conversion to grayscale and using Sobel (lines 107 through 124 (function:`abs_sobel_thresh`) of `Helper_Function.py`). Here's an example of my output for this step.
 
 ![alt text][image9]
 
@@ -95,7 +96,7 @@ I verified that my perspective transform was working as expected by drawing the 
 
 ![alt text][image4]
 
-####4. Lane-line pixel identification and polynomial fit (lines 243 through 298 (functions: `get_lane_lines` and `get_lane_lines_with_prior`) in my code in `Helper_function.py`)
+####4. Lane-line pixel identification and polynomial fit (lines 243 through 398 (functions: `get_lane_lines` and `get_lane_lines_with_prior`) in my code in `Helper_function.py`)
 There are 2 functions that are used for lane-line pixel identification and polynomial fit. `get_lane_lines_with_prior` uses input prior left and right lanes to initialize the lane-line search while `get_lane_lines` is called if there aren't any prior lines to reference. Instead this function uses a histogram and sliding windows in a more tedious search. 
 
 After obtaining candidate pixels for the left and right lane for I found my lane lines by fitting a 2nd order polynomial using numpy's polyfit, pretty much exactly like the project lesson.
@@ -128,5 +129,9 @@ Here's a [link to my video result](./project_video_output.mp4)
 
 ####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+This implementation works well for the majority of the project video. Where it would fail is the lack of contrast of lane lines or creation of false-positive lines from shadows or road coloring. 
+
+To improve robustness I would start with better color transforms and tresholds to find edge candidates for lane lines. Currently the conversion to grayscale for gradient equally considers all channels but a better approach may be to weight channels differently and to dynamically adjust these weights depending on the reliability of the previous frame. 
+
+In addition kernels used best detects vertical and horizontal lines while are targets are curves. We can adjust the kernel for curves based on angle computation. This has the potential to improve in the harder challenge video when the road curvature is more frequent and amplitudes are higher. 
 

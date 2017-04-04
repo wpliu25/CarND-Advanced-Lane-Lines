@@ -60,36 +60,30 @@ class Line():
         # Define conversions in x and y from pixels space to meters
         self.ym_per_pix = 30 / 720  # meters per pixel in y dimension
         self.xm_per_pix = 3.7 / 700  # meters per pixel in x dimension
-        self.left_curverad = None # meters
-        self.right_curverad = None # meters
+        self.left_curverad = 0 # meters
+        self.right_curverad = 0 # meters
 
         #distance in meters of vehicle center from the line
-        self.line_base_pos = None
+        self.line_base_pos = 0
 
     def check_lane_curvature(self, R, left=1):
-        """
-        Checks new radius of curvature `R` against the radius stored in the object.
-        """
-        R0 = self.right_curverad
+        # Compare new curvature `R` to previous
+
+        _r = self.right_curverad
         if(left == 1):
-            R0 = self.left_curverad
+            _r = self.left_curverad
 
         # Return true if there is no prior data
-        if R0 is None:
+        if _r is None:
             return True
 
-        self.check = abs(R - R0) / R0
+        self.check = abs(R - _r) / _r
 
-        return self.check <= 0.5  # Max change from frame to frame is 200%
+        return self.check <= 2/3
 
     def checkDetected(self, _left_fit, _right_fit, _left_fitx, _right_fitx, _ploty, _left_curverad, _right_curverad):
-        #difference in fit coefficients between last and new fits
-        self.diffs_left = np.abs(self.left_fit-_left_fit)
-        self.diffs_right = np.abs(self.right_fit- _right_fit)
-
         if(not self.saveNext):
             if(self.check_lane_curvature(_left_curverad, 1) and self.check_lane_curvature(_right_curverad, 0)):
-            #if((self.diffs_left < 100).all() and (self.diffs_right < 100).all()):
                 self.detected = True
                 self.left_fit = _left_fit
                 self.right_fit = _right_fit
@@ -100,10 +94,10 @@ class Line():
                 self.ploty = _ploty
             else:
                 self.detected = False
-                print("before: %.2f Now: %.2f" % (self.left_curverad, _left_curverad))
-                print("before: %.2f Now: %.2f" %(self.right_curverad, _right_curverad))
-                print("Not Detected Left!(%.2f,%.2f,%.2f)" % (self.diffs_left[0], self.diffs_left[1], self.diffs_left[2]))
-                print("Not Detected Right!(%.2f,%.2f,%.2f)" % (self.diffs_right[0], self.diffs_right[1], self.diffs_right[2]))
+                #print("Left before: %.2f Now: %.2f" % (self.left_curverad, _left_curverad))
+                #print("Right before: %.2f Now: %.2f" %(self.right_curverad, _right_curverad))
+                #print("Not Detected Left!(%.2f,%.2f,%.2f)" % (self.diffs_left[0], self.diffs_left[1], self.diffs_left[2]))
+                #print("Not Detected Right!(%.2f,%.2f,%.2f)" % (self.diffs_right[0], self.diffs_right[1], self.diffs_right[2]))
                 self.saveNext = True
         else:
             self.detected = True
@@ -115,26 +109,6 @@ class Line():
             self.right_curverad = _right_curverad
             self.ploty = _ploty
             self.saveNext = False
-
-def draw(undist, image, warped, left_fitx, right_fitx, ploty, Minv):
-    # Create an image to draw the lines on
-    warp_zero = np.zeros_like(warped).astype(np.uint8)
-    color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
-
-    # Recast the x and y points into usable format for cv2.fillPoly()
-    pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
-    pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
-    pts = np.hstack((pts_left, pts_right))
-
-    # Draw the lane onto the warped blank image
-    cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
-
-    # Warp the blank back to original image space using inverse perspective matrix (Minv)
-    newwarp = cv2.warpPerspective(color_warp, Minv, (image.shape[1], image.shape[0]))
-    # Combine the result with the original image
-    result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
-    plt.imshow(result)
-    return result
 
 def AdvancedLaneLines(image, line, debug=0):
 
@@ -165,32 +139,22 @@ def AdvancedLaneLines(image, line, debug=0):
 
     # determine lane curvature
     _left_curverad, _right_curverad = get_curvature(_ploty, _left_fit, _right_fit, _left_fitx, _right_fitx, line.xm_per_pix, line.ym_per_pix)
-    #print(left_curverad, 'm', right_curverad, 'm')
 
     # update lane detection
     line.checkDetected(_left_fit, _right_fit, _left_fitx, _right_fitx, _ploty, _left_curverad, _right_curverad)
 
     # determine vehicle position
-    vehicle_pos = image.shape[1] // 2
-    middle = (line.left_fitx[-1] + line.right_fitx[-1]) // 2
-    line.line_base_pos = (vehicle_pos - middle) * line.xm_per_pix
+    line.line_base_pos = get_vehicle_position(image, line.left_fitx, line.right_fitx, line.xm_per_pix)
 
     # draw lane findings
-    result = draw(undist, image, warped, line.left_fitx, line.right_fitx, line.ploty, line.warp_minv)
+    result = draw(undist, image, warped, line.left_fitx, line.right_fitx, line.ploty, line.warp_minv, line.left_curverad, line.right_curverad, line.line_base_pos)
 
-    # write curvature and position findings
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    cv2.putText(result, 'Radius of left line curvature: ' + str(line.left_curverad) + 'm', (50, 20), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
-    cv2.putText(result, 'Radius of right line curvature: ' + str(line.right_curverad) + 'm', (50, 50), font, 1, (255, 255, 255), 2,
-                cv2.LINE_AA)
-    cv2.putText(result, 'Vehicle position : %.2f m %s of center' % (abs(line.line_base_pos), 'left' if line.line_base_pos < 0 else 'right'), (50, 80),
-                font, 1, (255, 255, 255), 2, cv2.LINE_AA)
-
-    if(debug == 1):
-        if(not line.detected):
-            cv2.imshow('result', result)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+    #if(debug == 1):
+        #if(not line.detected):
+            #print(line.left_curverad, 'm', line.right_curverad, 'm')
+            #cv2.imshow('result', result)
+            #cv2.waitKey(0)
+            #cv2.destroyAllWindows()
 
     return result
 

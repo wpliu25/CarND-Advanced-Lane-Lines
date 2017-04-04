@@ -104,15 +104,15 @@ def corners_unwarp(img, nx, ny, mtx, dist):
 
 # Define a function that takes an image, gradient orientation,
 # and threshold min / max values.
-def abs_sobel_thresh(img, orient='x', thresh_min=0, thresh_max=255):
+def abs_sobel_thresh(img, orient='x', thresh_min=0, thresh_max=255, sobel_kernel = 3):
     # Convert to grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     # Apply x or y gradient with the OpenCV Sobel() function
     # and take the absolute value
     if orient == 'x':
-        abs_sobel = np.absolute(cv2.Sobel(gray, cv2.CV_64F, 1, 0))
+        abs_sobel = np.absolute(cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=sobel_kernel))
     if orient == 'y':
-        abs_sobel = np.absolute(cv2.Sobel(gray, cv2.CV_64F, 0, 1))
+        abs_sobel = np.absolute(cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=sobel_kernel))
     # Rescale back to 8 bit integer
     scaled_sobel = np.uint8(255*abs_sobel/np.max(abs_sobel))
     # Create a copy and apply the threshold
@@ -174,28 +174,28 @@ def pipeline(img, s_thresh=(170, 255), sx_thresh=(20, 100)):
     img = np.copy(img)
 
     # gradient
-    sxbinary = abs_sobel_thresh(img, orient='x', thresh_min=sx_thresh[0], thresh_max=sx_thresh[1])
+    ksize = 3  # Choose a larger odd number to smooth gradient measurements
+    gradx = abs_sobel_thresh(img, orient='x', thresh_min=sx_thresh[0], thresh_max=sx_thresh[1], sobel_kernel=ksize)
+    grady = abs_sobel_thresh(img, orient='y', thresh_min=sx_thresh[0], thresh_max=sx_thresh[1], sobel_kernel=ksize)
 
     # color
     s_binary = color_threshold(img, 2, s_thresh)
+    color_binary = np.dstack((np.zeros_like(gradx), gradx, s_binary))
 
-    # Stack each channel
-    # Note color_binary[:, :, 0] is all 0s, effectively an all black image. It might
-    # be beneficial to replace this channel with something else.
-    color_binary = np.dstack((np.zeros_like(sxbinary), sxbinary, s_binary))
+    # mag and dir
+    mag_binary = mag_thresh(img, sobel_kernel=ksize, mag_thresh=(0, 255))
+    dir_binary = dir_threshold(img, sobel_kernel=ksize, thresh=(0, np.pi / 2))
 
-    # Combine the two binary thresholds
-    combined_binary = np.zeros_like(sxbinary)
-    combined_binary[(s_binary == 1) | (sxbinary == 1)] = 255
+    combined_binary = np.zeros_like(dir_binary)
+    combined_binary[(s_binary == 1)|((gradx == 1) & (grady == 1))]=255# | ((mag_binary == 1) & (dir_binary == 1))] = 1
+
     return color_binary, combined_binary
-
 
 def window_mask(width, height, img_ref, center, level):
     output = np.zeros_like(img_ref)
     output[int(img_ref.shape[0] - (level + 1) * height):int(img_ref.shape[0] - level * height),
     max(0, int(center - width / 2)):min(int(center + width / 2), img_ref.shape[1])] = 1
     return output
-
 
 def find_window_centroids(warped, window_width, window_height, margin):
     window_centroids = []  # Store the (left,right) window centroid positions per level
@@ -503,6 +503,43 @@ def get_curvature(ploty, left_fit, right_fit, leftx, rightx, xm_per_pix = 3.7 / 
         2 * right_fit_cr[0])
 
     return left_curverad, right_curverad
+
+def draw(undist, image, warped, left_fitx, right_fitx, ploty, Minv, left_curverad, right_curverad, line_base_pos):
+    # Create an image to draw the lines on
+    warp_zero = np.zeros_like(warped).astype(np.uint8)
+    color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+
+    # Recast the x and y points into usable format for cv2.fillPoly()
+    pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+    pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+    pts = np.hstack((pts_left, pts_right))
+
+    # Draw the lane onto the warped blank image
+    cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
+
+    # Warp the blank back to original image space using inverse perspective matrix (Minv)
+    newwarp = cv2.warpPerspective(color_warp, Minv, (image.shape[1], image.shape[0]))
+    # Combine the result with the original image
+    result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
+    plt.imshow(result)
+
+    # write curvature and position findings
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    cv2.putText(result, 'Radius of left line curvature: ' + str(left_curverad) + 'm', (50, 20), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
+    cv2.putText(result, 'Radius of right line curvature: ' + str(right_curverad) + 'm', (50, 50), font, 1, (255, 255, 255), 2,
+                cv2.LINE_AA)
+    cv2.putText(result, 'Vehicle position : %.2f m %s of center' % (abs(line_base_pos), 'left' if line_base_pos < 0 else 'right'), (50, 80),
+                font, 1, (255, 255, 255), 2, cv2.LINE_AA)
+
+    return result
+
+def get_vehicle_position(image, left_fitx, right_fitx, xm_per_pix):
+    # determine vehicle position
+    vehicle_pos = image.shape[1] // 2
+    middle = (left_fitx[-1] + right_fitx[-1]) // 2
+    line_base_pos = (vehicle_pos - middle) * xm_per_pix
+
+    return line_base_pos
 
 
 
