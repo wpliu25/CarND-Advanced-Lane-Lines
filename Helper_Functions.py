@@ -504,7 +504,7 @@ def get_curvature(ploty, left_fit, right_fit, leftx, rightx, xm_per_pix = 3.7 / 
 
     return left_curverad, right_curverad
 
-def draw(undist, image, warped, left_fitx, right_fitx, ploty, Minv, left_curverad, right_curverad, line_base_pos):
+def draw(undist, image, warped, left_fitx, right_fitx, ploty, Minv, left_curverad, right_curverad, line_base_pos, detected, left_curverad_current, right_curverad_current, straightAway=False):
     # Create an image to draw the lines on
     warp_zero = np.zeros_like(warped).astype(np.uint8)
     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
@@ -525,11 +525,16 @@ def draw(undist, image, warped, left_fitx, right_fitx, ploty, Minv, left_curvera
 
     # write curvature and position findings
     font = cv2.FONT_HERSHEY_SIMPLEX
-    cv2.putText(result, 'Radius of left line curvature: ' + str(left_curverad) + 'm', (50, 20), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
-    cv2.putText(result, 'Radius of right line curvature: ' + str(right_curverad) + 'm', (50, 50), font, 1, (255, 255, 255), 2,
+    fontColor = (255, 255, 255)
+    if(not detected):
+        fontColor = (255,0,0)
+    cv2.putText(result, 'Radius of left line curvature: ' + str(left_curverad) + ' compared to '+str(left_curverad_current)+ ' m', (50, 20), font, 1, fontColor, 2, cv2.LINE_AA)
+    cv2.putText(result, 'Radius of right line curvature: ' + str(right_curverad) + ' compared to '+str(right_curverad_current)+ ' m', (50, 50), font, 1, fontColor, 2,
                 cv2.LINE_AA)
     cv2.putText(result, 'Vehicle position : %.2f m %s of center' % (abs(line_base_pos), 'left' if line_base_pos < 0 else 'right'), (50, 80),
-                font, 1, (255, 255, 255), 2, cv2.LINE_AA)
+                font, 1, fontColor, 2, cv2.LINE_AA)
+    if(straightAway):
+        cv2.putText(result, 'Straight Lanes Detected', (50, 100), font, 1, fontColor, 2, cv2.LINE_AA)
 
     return result
 

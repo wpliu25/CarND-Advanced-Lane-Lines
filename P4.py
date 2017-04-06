@@ -60,30 +60,58 @@ class Line():
         # Define conversions in x and y from pixels space to meters
         self.ym_per_pix = 30 / 720  # meters per pixel in y dimension
         self.xm_per_pix = 3.7 / 700  # meters per pixel in x dimension
-        self.left_curverad = 0 # meters
-        self.right_curverad = 0 # meters
+        self.left_curverad = None # meters
+        self.right_curverad = None # meters
+        self.straightAway = False
 
         #distance in meters of vehicle center from the line
         self.line_base_pos = 0
 
-    def check_lane_curvature(self, R, left=1):
+    def check_lane_curvature(self, left, right):
         # Compare new curvature `R` to previous
 
         _r = self.right_curverad
-        if(left == 1):
-            _r = self.left_curverad
+        _l = self.left_curverad
 
         # Return true if there is no prior data
-        if _r is None:
+        if _r is None or _l is None:
             return True
 
-        self.check = abs(R - _r) / _r
+        check_right = abs(right - _r) / _r
+        check_left = abs(left - _l) / _l
 
-        return self.check <= 2/3
+        ratio_threshold = 7/12
+        absolute_threshold_max = 2000
+        absolute_threshold_min = 500
+        curve_threshold = 1100
+
+        value = False
+
+        # within threshold and close to previous => good detection
+        if((left >= absolute_threshold_min) and (right >= absolute_threshold_min) and (left < absolute_threshold_max) and (right < absolute_threshold_max) and (check_left <= ratio_threshold) and (check_right <= ratio_threshold)):
+            value = True
+
+        # good detection but large curves on both lanes => straight lanes
+        if(value and (left > curve_threshold) and (right > curve_threshold)):
+            self.straightAway = True
+
+        # in straight lanes mode, both large curves and still in straight lines mode => good detection
+        if(self.straightAway and left >= absolute_threshold_max and right >= absolute_threshold_max):
+            value = True
+
+        # in straight lanes mode, but reasonable curves back to curved lanes mode => good detection
+        if(self.straightAway and left >= absolute_threshold_min and right >= absolute_threshold_min and left <= curve_threshold and right <= curve_threshold):
+            self.straightAway = False
+            value = True
+
+        return value
 
     def checkDetected(self, _left_fit, _right_fit, _left_fitx, _right_fitx, _ploty, _left_curverad, _right_curverad):
+        self.detected = False
+        self.left_curverad_current = _left_curverad
+        self.right_curverad_current = _right_curverad
         if(not self.saveNext):
-            if(self.check_lane_curvature(_left_curverad, 1) and self.check_lane_curvature(_right_curverad, 0)):
+            if(self.check_lane_curvature(_left_curverad, _right_curverad)):
                 self.detected = True
                 self.left_fit = _left_fit
                 self.right_fit = _right_fit
@@ -98,7 +126,7 @@ class Line():
                 #print("Right before: %.2f Now: %.2f" %(self.right_curverad, _right_curverad))
                 #print("Not Detected Left!(%.2f,%.2f,%.2f)" % (self.diffs_left[0], self.diffs_left[1], self.diffs_left[2]))
                 #print("Not Detected Right!(%.2f,%.2f,%.2f)" % (self.diffs_right[0], self.diffs_right[1], self.diffs_right[2]))
-                self.saveNext = True
+                #self.saveNext = True
         else:
             self.detected = True
             self.left_fit = _left_fit
@@ -147,7 +175,7 @@ def AdvancedLaneLines(image, line, debug=0):
     line.line_base_pos = get_vehicle_position(image, line.left_fitx, line.right_fitx, line.xm_per_pix)
 
     # draw lane findings
-    result = draw(undist, image, warped, line.left_fitx, line.right_fitx, line.ploty, line.warp_minv, line.left_curverad, line.right_curverad, line.line_base_pos)
+    result = draw(undist, image, warped, line.left_fitx, line.right_fitx, line.ploty, line.warp_minv, line.left_curverad, line.right_curverad, line.line_base_pos, line.detected, line.left_curverad_current, line.right_curverad_current, line.straightAway)
 
     #if(debug == 1):
         #if(not line.detected):
