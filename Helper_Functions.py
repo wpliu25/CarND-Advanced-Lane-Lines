@@ -240,6 +240,15 @@ def get_perspective_transform(image, src_in = None, dst_in = None):
 
     return src_out, dst_out, warp_m, warp_minv
 
+def generate_plot(binary_warped, left_fit, right_fit, line=None):
+    # Generate x and y values for plotting
+    ploty = np.linspace(0, binary_warped.shape[0] - 1, binary_warped.shape[0])
+    left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
+    right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
+
+    return left_fitx, right_fitx, ploty
+
+
 def get_lane_lines(binary_warped):
     # Assuming you have created a warped binary image called "binary_warped"
     # Take a histogram of the bottom half of the image
@@ -312,9 +321,7 @@ def get_lane_lines(binary_warped):
     right_fit = np.polyfit(righty, rightx, 2)
 
     # Generate x and y values for plotting
-    ploty = np.linspace(0, binary_warped.shape[0] - 1, binary_warped.shape[0])
-    left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
-    right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
+    left_fitx, right_fitx, ploty = generate_plot(binary_warped, left_fit, right_fit)
 
     out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
     out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
@@ -504,7 +511,7 @@ def get_curvature(ploty, left_fit, right_fit, leftx, rightx, xm_per_pix = 3.7 / 
 
     return left_curverad, right_curverad
 
-def draw(undist, image, warped, left_fitx, right_fitx, ploty, Minv, left_curverad, right_curverad, line_base_pos, detected, left_curverad_current, right_curverad_current, straightAway=False):
+def draw(undist, image, warped, left_fitx, right_fitx, ploty, Minv, left_curverad, right_curverad, line_base_pos, detected, left_curverad_current, right_curverad_current, line_base_pos_current, straightAway=False):
     # Create an image to draw the lines on
     warp_zero = np.zeros_like(warped).astype(np.uint8)
     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
@@ -531,7 +538,7 @@ def draw(undist, image, warped, left_fitx, right_fitx, ploty, Minv, left_curvera
     cv2.putText(result, 'Radius of left line curvature: ' + str(left_curverad) + ' compared to '+str(left_curverad_current)+ ' m', (50, 20), font, 1, fontColor, 2, cv2.LINE_AA)
     cv2.putText(result, 'Radius of right line curvature: ' + str(right_curverad) + ' compared to '+str(right_curverad_current)+ ' m', (50, 50), font, 1, fontColor, 2,
                 cv2.LINE_AA)
-    cv2.putText(result, 'Vehicle position : %.2f m %s of center' % (abs(line_base_pos), 'left' if line_base_pos < 0 else 'right'), (50, 80),
+    cv2.putText(result, 'Vehicle position : %.2f m %s of center compared to %s' % (abs(line_base_pos), 'left' if line_base_pos < 0 else 'right', str(line_base_pos_current)), (50, 80),
                 font, 1, fontColor, 2, cv2.LINE_AA)
     if(straightAway):
         cv2.putText(result, 'Straight Lanes Detected', (50, 100), font, 1, fontColor, 2, cv2.LINE_AA)
@@ -545,10 +552,5 @@ def get_vehicle_position(image, left_fitx, right_fitx, xm_per_pix):
     line_base_pos = (vehicle_pos - middle) * xm_per_pix
 
     return line_base_pos
-
-
-
-
-
 
 

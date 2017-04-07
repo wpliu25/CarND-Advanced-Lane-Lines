@@ -1,4 +1,3 @@
-#importing some useful packages
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
@@ -67,6 +66,35 @@ class Line():
         #distance in meters of vehicle center from the line
         self.line_base_pos = 0
 
+        self.running_average_n = 30
+        self.running_average_index_left = 0
+        self.running_average_index_right = 0
+        self.left_fix_q = np.zeros((self.running_average_n, 3))
+        self.right_fix_q = np.zeros((self.running_average_n, 3))
+
+        self.goodDetection = False
+        self.line_base_pos_current = 0
+
+    def insert_fit(self, left_fit, right_fit):
+
+        self.left_fix_q[self.running_average_index_left] = left_fit
+        self.running_average_index_left = self.running_average_index_left + 1
+        if(self.running_average_index_left >= self.running_average_n-1):
+            self.running_average_index_left = 0
+
+        self.right_fix_q[self.running_average_index_right] = right_fit
+        self.running_average_index_right = self.running_average_index_right + 1
+        if(self.running_average_index_right >= self.running_average_n-1):
+            self.running_average_index_right = 0
+
+        return self.get_fit(1), self.get_fit(0)
+
+    def get_fit(self, left=1):
+        if(left):
+            return self.left_fix_q.mean(axis=0)
+        else:
+            return self.right_fix_q.mean(axis=0)
+
     def check_lane_curvature(self, left, right):
         # Compare new curvature `R` to previous
 
@@ -90,6 +118,7 @@ class Line():
         # within threshold and close to previous => good detection
         if((left >= absolute_threshold_min) and (right >= absolute_threshold_min) and (left < absolute_threshold_max) and (right < absolute_threshold_max) and (check_left <= ratio_threshold) and (check_right <= ratio_threshold)):
             value = True
+            self.goodDetection = True
 
         # good detection but large curves on both lanes => straight lanes
         if(value and (left > curve_threshold) and (right > curve_threshold)):
@@ -106,13 +135,17 @@ class Line():
 
         return value
 
-    def checkDetected(self, _left_fit, _right_fit, _left_fitx, _right_fitx, _ploty, _left_curverad, _right_curverad):
+    def checkDetected(self, image, _left_fit, _right_fit, _left_fitx, _right_fitx, _ploty, _left_curverad, _right_curverad):
         self.detected = False
+        self.goodDetection = False
         self.left_curverad_current = _left_curverad
         self.right_curverad_current = _right_curverad
+        self.line_base_pos_current = get_vehicle_position(image, _left_fitx, _right_fitx, self.xm_per_pix)
         if(not self.saveNext):
             if(self.check_lane_curvature(_left_curverad, _right_curverad)):
                 self.detected = True
+                #self.left_fit, self.right_fit = self.insert_fit(_left_fit, _right_fit)
+                #if(self.goodDetection):
                 self.left_fit = _left_fit
                 self.right_fit = _right_fit
                 self.left_fitx = _left_fitx
@@ -129,6 +162,7 @@ class Line():
                 #self.saveNext = True
         else:
             self.detected = True
+            #self.left_fit, self.right_fit = self.insert_fit(_left_fit, _right_fit)
             self.left_fit = _left_fit
             self.right_fit = _right_fit
             self.left_fitx = _left_fitx
@@ -169,13 +203,13 @@ def AdvancedLaneLines(image, line, debug=0):
     _left_curverad, _right_curverad = get_curvature(_ploty, _left_fit, _right_fit, _left_fitx, _right_fitx, line.xm_per_pix, line.ym_per_pix)
 
     # update lane detection
-    line.checkDetected(_left_fit, _right_fit, _left_fitx, _right_fitx, _ploty, _left_curverad, _right_curverad)
+    line.checkDetected(image, _left_fit, _right_fit, _left_fitx, _right_fitx, _ploty, _left_curverad, _right_curverad)
 
     # determine vehicle position
     line.line_base_pos = get_vehicle_position(image, line.left_fitx, line.right_fitx, line.xm_per_pix)
 
     # draw lane findings
-    result = draw(undist, image, warped, line.left_fitx, line.right_fitx, line.ploty, line.warp_minv, line.left_curverad, line.right_curverad, line.line_base_pos, line.detected, line.left_curverad_current, line.right_curverad_current, line.straightAway)
+    result = draw(undist, image, warped, line.left_fitx, line.right_fitx, line.ploty, line.warp_minv, line.left_curverad, line.right_curverad, line.line_base_pos, line.detected, line.left_curverad_current, line.right_curverad_current, line.line_base_pos_current, line.straightAway)
 
     #if(debug == 1):
         #if(not line.detected):
@@ -203,3 +237,4 @@ if __name__ == "__main__":
         #cv2.imshow('result', result)
         #cv2.waitKey(0)
     #cv2.destroyAllWindows()
+
