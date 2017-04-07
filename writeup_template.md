@@ -129,7 +129,9 @@ Here's a [link to my video result](./project_video_output.mp4)
 
 ####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-This implementation works well for the majority of the project video. Where it would fail is the lack of contrast of lane lines or creation of false-positive lines from shadows or road coloring. 
+This implementation works well for the majority of the project video. Where it would fail is the lack of contrast of lane lines or creation of false-positive lines from shadows or road coloring.
+
+'check_lane_curvature' in lines 70-107 of P4.py was updated to have tighter thresholds around acceptable lane detection. In addition, a 'Straight Away' mode was added to accomodate unexpected large curvatures with straight lane detection.
 
 To improve robustness I would start with better color transforms and tresholds to find edge candidates for lane lines. Currently the conversion to grayscale for gradient equally considers all channels but a better approach may be to weight channels differently and to dynamically adjust these weights depending on the reliability of the previous frame. 
 
